@@ -1,6 +1,7 @@
 (ns clj-postgres-async.core
   (:require [clojure.string :as string]
-            [clojure.core.async :refer [chan put!] :as async])
+            [clojure.core.async :refer [chan put! go <!] :as async]
+            [clojure.algo.monads :refer [defmonad domonad]])
   (:import [com.github.pgasync ConnectionPoolBuilder]
            [com.github.pgasync.callback ErrorHandler ResultHandler
             TransactionHandler TransactionCompletedHandler])
@@ -80,3 +81,21 @@
 (defasync <begin!    [db])
 (defasync <commit!   [tx])
 (defasync <rollback! [tx])
+
+(defn- build-bindings [bindings err]
+  "Converts bindings x (f) to [x err] (if [err] [nil err] (<! (f)))"
+  (let [vars (map (fn [v]
+                    [v err])
+                  (take-nth 2 bindings))
+        fs   (map (fn [f]
+                    `(if ~err [nil ~err] (<! ~f)))
+                  (take-nth 2 (rest bindings)))]
+    (list* [err err] [nil nil] (interleave vars fs))))
+
+(defmacro dosql [bindings & forms]
+  "Takes values from channels returned by db functions and handles errors"
+  (let [err (gensym "e")]
+    `(let [~@(build-bindings bindings err)]
+       (if ~err
+         [nil ~err]
+         [(do ~@forms) nil]))))
