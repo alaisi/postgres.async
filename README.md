@@ -6,7 +6,7 @@ Asynchronous PostgreSQL Clojure library
 ## Usage
 
 ```clojure
-(ns clj-postgres-async.core
+(ns example.core
   (:require [clj-postgres-async.core :refer :all]
             [clojure.core.async :refer [go <!!]]))
 
@@ -39,7 +39,7 @@ Asynchronous PostgreSQL Clojure library
 (<!! (<execute! d ["select 1 as anything"]))
 ; [{:updated 0, :rows [{:anything 1}]} nil]
 
-;; *asynchronous* composition
+;; Asynchronous composition!
 (<!! (go
        (dosql [tx (<begin! db)
                rs (<insert! tx {:table products :returning "id"} {:name "saw"})
