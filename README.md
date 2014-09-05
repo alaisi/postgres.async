@@ -39,7 +39,7 @@ Asynchronous PostgreSQL Clojure library
 (<!! (<execute! d ["select 1 as anything"]))
 ; [{:updated 0, :rows [{:anything 1}]} nil]
 
-;; Asynchronous composition!
+;; Asynchronous composition! dosql returns [nil exception] on first error
 (<!! (go
        (dosql [tx (<begin! db)
                rs (<insert! tx {:table products :returning "id"} {:name "saw"})
