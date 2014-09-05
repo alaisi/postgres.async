@@ -127,20 +127,3 @@
          [nil ~err]
          [(do ~@forms) nil]))))
 
-(def db (open-db {:hostname "localhost"
-                  :port 5432
-                  :database "postgres"
-                  :username "postgres"
-                  :password "postgres"
-                  :pool-size 20}))
-
-
-
-(execute! db
-          ["create table customer (id serial, name varchar(255), address varchar(255))"]
-          (fn [[rs err]]
-            (when err (.printStackTrace err))
-            (print rs)))
-
-(query! db ["select name, address from customer"] #(print %))
-
