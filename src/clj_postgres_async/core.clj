@@ -97,7 +97,7 @@
 
 (defmacro defasync [name args]
   `(defn ~name [~@args]
-     (let [c# (chan)]
+     (let [c# (chan 1)]
        (~(symbol (subs (str name) 1)) ~@args #(put! c# %))
        c#)))
 
