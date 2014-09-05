@@ -47,10 +47,9 @@ Asynchronous PostgreSQL Clojure library
                rs (<query!  tx ["select * from promotions"])
                _  (<commit! tx)]
             {:now-promoting rs})))
-; [[{:id 1, product_id 1002}] nil]
+; [{:now-promoting [{:id 1, product_id 1002}]} nil]
 
 (close-db! db)
 ; nil
-
 ```
 
