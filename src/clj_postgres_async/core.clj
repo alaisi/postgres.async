@@ -1,34 +1,37 @@
 (ns clj-postgres-async.core
   (:require [clojure.string :as string]
-            [clojure.core.async :refer [chan put! go <!] :as async]
-            [clojure.algo.monads :refer [defmonad domonad]])
+            [clojure.core.async :refer [chan put! go <!] :as async])
   (:import [com.github.pgasync ConnectionPoolBuilder]
            [com.github.pgasync.callback ErrorHandler ResultHandler
             TransactionHandler TransactionCompletedHandler])
   (:gen-class))
 
-(defn open-db [{:keys [hostname port username password database]}]
+(defn open-db [{:keys [hostname port username password database pool-size]}]
   (-> (ConnectionPoolBuilder.)
       (.hostname hostname)
       (.port port)
       (.database database)
       (.username username)
       (.password password)
+      (.poolSize pool-size)
       (.build)))
 
 (defn close-db! [db]
   (.close db))
 
 (defn- result->map [result]
-  (let [columns (.getColumns result)]
-    (map (fn [row]
-           (reduce (fn [rowmap col]
-                     (assoc rowmap (keyword (.toLowerCase col)) (.get row col)))
-                   {}
-                   columns))
-         result)))
+  (let [columns (.getColumns result)
+        rows    (map (fn [row]
+                       (reduce (fn [rowmap col]
+                                 (assoc rowmap
+                                   (keyword (.toLowerCase col))
+                                   (.get row col)))
+                               {}
+                               columns))
+                     result)]
+    {:updated (.updatedRows result) :rows rows}))
 
-(defn query! [db [sql & params] f]
+(defn execute! [db [sql & params] f]
   (let [handler (reify
                   ResultHandler (onResult [_ r]
                                   (f [(result->map r) nil]))
@@ -36,16 +39,38 @@
                                  (f [nil t])))]
     (.query db sql params handler handler)))
 
-(defn- create-insert-sql [table row]
-  (str "INSERT INTO " (name table) " ("
-       (string/join ", " (for [e row] (-> e (first) (name))))
-       ") VALUES ("
-       (string/join ", " (for [i (range 1 (inc (count row)))] (str "$" i)))
-       ")"))
+(defn query! [db sql f]
+  (execute! db sql (fn [[rs err]]
+                     (f [(:rows rs) err]))))
 
-(defn insert! [db table row f]
-  (query! db (list* (create-insert-sql table row)
-                    (for [e row] (get e 1)))
+(defn- create-insert-sql [spec row]
+  (let [cols   (for [e row] (-> e (first) (name)))
+        params (for [i (range 1 (inc (count row)))] (str "$" i))
+        ret    (:returning spec)]
+    (str "INSERT INTO " (:table spec)
+         " (" (string/join ", " cols) ") "
+         "VALUES (" (string/join ", " params) ")"
+         (when ret
+           (str " RETURNING " ret)))))
+
+(defn insert! [db spec data f]
+  (execute! db (list* (create-insert-sql spec data)
+                    (for [e data] (second e)))
+          f))
+
+(defn- create-update-sql [spec data]
+  (let [where  (:where spec)
+        cols   (for [e data] (-> e (first) (name)))
+        params (range (count where) (+ (count where) (count data)))]
+    (str "UPDATE " (:table spec)
+         " SET "   (string/join ", " (map #(str (first %1) " = $" (second %1))
+                                          (partition 2 (interleave cols params))))
+         " WHERE " (first where))))
+
+(defn update! [db spec data f]
+  (execute! db (flatten [(create-update-sql spec data)
+                        (rest (:where spec))
+                        (for [e data] (second e))])
           f))
 
 (defn begin! [db f]
@@ -76,13 +101,15 @@
        (~(symbol (subs (str name) 1)) ~@args #(put! c# %))
        c#)))
 
+(defasync <execute!  [db query])
 (defasync <query!    [db query])
 (defasync <insert!   [db table row])
+(defasync <update!   [db sql-spec data])
 (defasync <begin!    [db])
 (defasync <commit!   [tx])
 (defasync <rollback! [tx])
 
-(defn- build-bindings [bindings err]
+(defn- async-sql-bindings [bindings err]
   "Converts bindings x (f) to [x err] (if [err] [nil err] (<! (f)))"
   (let [vars (map (fn [v]
                     [v err])
@@ -95,7 +122,25 @@
 (defmacro dosql [bindings & forms]
   "Takes values from channels returned by db functions and handles errors"
   (let [err (gensym "e")]
-    `(let [~@(build-bindings bindings err)]
+    `(let [~@(async-sql-bindings bindings err)]
        (if ~err
          [nil ~err]
          [(do ~@forms) nil]))))
+
+(def db (open-db {:hostname "localhost"
+                  :port 5432
+                  :database "postgres"
+                  :username "postgres"
+                  :password "postgres"
+                  :pool-size 20}))
+
+
+
+(execute! db
+          ["create table customer (id serial, name varchar(255), address varchar(255))"]
+          (fn [[rs err]]
+            (when err (.printStackTrace err))
+            (print rs)))
+
+(query! db ["select name, address from customer"] #(print %))
+
