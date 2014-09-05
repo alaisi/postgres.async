@@ -42,8 +42,8 @@ Asynchronous PostgreSQL Clojure library
 ;; *asynchronous* composition
 (<!! (go
        (dosql [tx (<begin! db)
-               id (<insert! tx {:table products :returning "id"} {:name "saw"})
-               _  (<insert! tx {:table promotions} {:product_id (get-in id [:rows 0 :id])})
+               rs (<insert! tx {:table products :returning "id"} {:name "saw"})
+               _  (<insert! tx {:table promotions} {:product_id (get-in rs [:rows 0 :id])})
                rs (<query!  tx ["select * from promotions"])
                _  (<commit! tx)]
             {:now-promoting rs})))
