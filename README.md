@@ -49,5 +49,8 @@ Asynchronous PostgreSQL Clojure library
             {:now-promoting rs})))
 ; [[{:id 1, product_id 1002}] nil]
 
+(close-db! db)
+; nil
+
 ```
 
