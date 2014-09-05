@@ -29,7 +29,7 @@
                                {}
                                columns))
                      result)]
-    {:updated (.updatedRows result) :rows rows}))
+    {:updated (.updatedRows result) :rows (into [] rows)}))
 
 (defn execute! [db [sql & params] f]
   (let [handler (reify
