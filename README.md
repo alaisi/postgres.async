@@ -19,7 +19,7 @@ Asynchronous PostgreSQL Clojure library
                   :pool-size 20}))
 
 (<!! (<insert! db {:table "products"} {:name "screwdriver" :price 15}))
-; [{:updated 1, :rows [} nil]
+; [{:updated 1, :rows []} nil]
 
 (<!! (<insert! db {:table "products" :returning "id"} {:name "hammer" :price 5}))
 ; [{:updated 1, :rows [{:id 1001}]} nil]

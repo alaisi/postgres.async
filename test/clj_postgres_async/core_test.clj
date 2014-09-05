@@ -15,7 +15,8 @@
                            :port     (env "PG_PORT" 5432)
                            :database (env "PG_DB" "postgres")
                            :username (env "PG_USER" "postgres")
-                           :password (env "PG_PASSWORD" "postgres")})]
+                           :password (env "PG_PASSWORD" "postgres")
+                           :pool-size 1})]
     (try (f)
          (finally (close-db! *db*)))))
 
@@ -23,7 +24,7 @@
 
 (deftest queries
   (testing "<query! returns rows as map"
-    (is (= ['({:x 1}) nil]
+    (is (= [[{:x 1}] nil]
            (<!! (<query! *db* ["select 1 as x"]))))))
 
 (deftest sql-macro
