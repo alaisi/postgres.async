@@ -27,6 +27,9 @@ Asynchronous PostgreSQL Clojure library
 (<!! (<query! db ["select name, price from products"]))
 ; [({:id 1000, :name "screwdriver", :price 15} {:id 1001, :name "hammer", :price 10) nil]
 
+(<!! (<query! db ["select name, price from products where id = $1" 1001]))
+; [({:id 1001, :name "hammer", :price 10) nil]
+
 (<!! (<query! db ["select * from foobar"]))
 ; [nil #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
 
