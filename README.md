@@ -36,6 +36,10 @@ Asynchronous PostgreSQL Clojure library
 (<!! (<update! db {:table "users" :where ["id=$1" 1001}} {:price 6}))
 ; [{:updated 1, :rows ()} nil]
 
+(<!! (<execute! d ["select 1 as anything"]))
+; [{:updated 0, :rows ({:anything 1})} nil]
+
+;; *asynchronous* composition
 (go (dosql [tx (<begin! db)
             id (<insert! tx {:table products :returning "id"} {:name "saw"})
             _  (<insert! tx {:table promotions} {:product_id (-> id (:rows) (first) (:id))})
