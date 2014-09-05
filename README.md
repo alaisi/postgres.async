@@ -19,25 +19,25 @@ Asynchronous PostgreSQL Clojure library
                   :pool-size 20}))
 
 (<!! (<insert! db {:table "products"} {:name "screwdriver" :price 15}))
-; [{:updated 1, :rows ()} nil]
+; [{:updated 1, :rows [} nil]
 
 (<!! (<insert! db {:table "products" :returning "id"} {:name "hammer" :price 5}))
-; [{:updated 1, :rows ({:id 1001})} nil]
+; [{:updated 1, :rows [{:id 1001}]} nil]
 
 (<!! (<query! db ["select name, price from products"]))
-; [({:id 1000, :name "screwdriver", :price 15} {:id 1001, :name "hammer", :price 10) nil]
+; [[{:id 1000, :name "screwdriver", :price 15} {:id 1001, :name "hammer", :price 10] nil]
 
 (<!! (<query! db ["select name, price from products where id = $1" 1001]))
-; [({:id 1001, :name "hammer", :price 10) nil]
+; [[{:id 1001, :name "hammer", :price 10] nil]
 
 (<!! (<query! db ["select * from foobar"]))
 ; [nil #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
 
 (<!! (<update! db {:table "users" :where ["id=$1" 1001}} {:price 6}))
-; [{:updated 1, :rows ()} nil]
+; [{:updated 1, :rows []} nil]
 
 (<!! (<execute! d ["select 1 as anything"]))
-; [{:updated 0, :rows ({:anything 1})} nil]
+; [{:updated 0, :rows [{:anything 1}]} nil]
 
 ;; *asynchronous* composition
 (go (dosql [tx (<begin! db)
