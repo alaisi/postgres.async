@@ -1,7 +1,7 @@
 clj-postgres-async
 ==================
 
-Asynchronous PostgreSQL Clojure library
+Asynchronous PostgreSQL client for Clojure
 
 ## Usage
 

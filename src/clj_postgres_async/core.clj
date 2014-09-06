@@ -9,11 +9,11 @@
 (defn open-db [{:keys [hostname port username password database pool-size]}]
   (-> (ConnectionPoolBuilder.)
       (.hostname hostname)
-      (.port port)
+      (.port (or port 5432))
       (.database database)
       (.username username)
       (.password password)
-      (.poolSize pool-size)
+      (.poolSize (or pool-size 25))
       (.build)))
 
 (defn close-db! [db]
@@ -43,14 +43,13 @@
   (execute! db sql (fn [[rs err]]
                      (f [(:rows rs) err]))))
 
-(defn- create-insert-sql [spec row]
-  (let [cols   (for [e row] (-> e (first) (name)))
-        params (for [i (range 1 (inc (count row)))] (str "$" i))
-        ret    (:returning spec)]
+(defn- create-insert-sql [spec data]
+  (let [cols   (for [e data] (-> e (first) (name)))
+        params (for [i (range 1 (inc (count data)))] (str "$" i))]
     (str "INSERT INTO " (:table spec)
          " (" (string/join ", " cols) ") "
          "VALUES (" (string/join ", " params) ")"
-         (when ret
+         (if-let [ret (:returning spec)]
            (str " RETURNING " ret)))))
 
 (defn insert! [db spec data f]
@@ -62,13 +61,12 @@
   (let [where (:where spec)
         cols   (for [e data] (-> e (first) (name)))
         params (for [i (range (count where) (+ (count where) (count data)))]
-                 (str "$" i))
-        ret   (:returning spec)]
+                 (str "$" i))]
     (str "UPDATE " (:table spec)
          " SET (" (string/join "," cols)
          ")=(" (string/join "," params) ")"
          " WHERE " (first where)
-         (when ret
+         (if-let [ret (:returning spec)]
            (str " RETURNING " ret)))))
 
 (defn update! [db spec data f]
@@ -107,7 +105,7 @@
 
 (defasync <execute!  [db query])
 (defasync <query!    [db query])
-(defasync <insert!   [db table row])
+(defasync <insert!   [db table data])
 (defasync <update!   [db sql-spec data])
 (defasync <begin!    [db])
 (defasync <commit!   [tx])
