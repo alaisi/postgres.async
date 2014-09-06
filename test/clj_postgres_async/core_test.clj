@@ -10,6 +10,15 @@
     value
     default))
 
+(defn create-tables [db]
+  (let [[_ err] (<!! (go (dosql
+                          [_ (<execute! db ["drop table if exists clj_pg_test"])
+                           _ (<execute! db ["create table clj_pg_test (
+                                              id serial, t varchar(10)
+                                            )"])])))]
+        (if err
+          (throw err))))
+
 (defn db-fixture [f]
   (binding [*db* (open-db {:hostname (env "PG_HOST" "localhost")
                            :port     (env "PG_PORT" 5432)
@@ -18,14 +27,8 @@
                            :password (env "PG_PASSWORD" "postgres")
                            :pool-size 1})]
     (try
-      (let [[_ err] (<!! (go (dosql
-                              [_ (<execute! *db* ["drop table if exists clj_pg_test"])
-                               _ (<execute! *db* ["create table clj_pg_test (
-                                              id serial, t varchar(10)
-                                            )"])])))]
-        (if err
-          (throw err)
-          (f)))
+      (create-tables *db*)
+      (f)
       (finally (close-db! *db*)))))
 
 (use-fixtures :each db-fixture)
