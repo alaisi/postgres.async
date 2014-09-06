@@ -3,25 +3,25 @@
             [clojure.core.async :refer [<!! go]]
             [clj-postgres-async.core :refer :all]))
 
-(def ^:dynamic *db*)
+(def ^:private ^:dynamic *db*)
+
+(defn- await [channel]
+  (let [[r err] (<!! channel)]
+    (if err
+      (throw err)
+      r)))
+
+(defn- create-tables [db]
+  (await (<execute! db ["drop table if exists clj_pg_test"]))
+  (await (<execute! db ["create table clj_pg_test (
+                           id serial, t varchar(10))"])))
 
 (defn- env [name default]
   (if-let [value (System/getenv name)]
     value
     default))
 
-(defn await [channel]
-  (let [[r err] (<!! channel)]
-    (if err
-      (throw err)
-      r)))
-
-(defn create-tables [db]
-  (await (<execute! db ["drop table if exists clj_pg_test"]))
-  (await (<execute! db ["create table clj_pg_test (
-                           id serial, t varchar(10))"])))
-
-(defn db-fixture [f]
+(defn- db-fixture [f]
   (binding [*db* (open-db {:hostname (env "PG_HOST" "localhost")
                            :port     (env "PG_PORT" 5432)
                            :database (env "PG_DB" "postgres")
@@ -50,8 +50,7 @@
 
 (deftest sql-macro
   (testing "dosql returns last form"
-    (is (= ["123" nil]
-           (<!! (go (dosql
-                     [rs (<query! *db* ["select 123 as x"])
-                      rs (<query! *db* ["select $1::text as t" (:x (first rs))])]
-                     (:t (first rs)))))))))
+    (is (= "123" (await (go (dosql
+                             [rs (<query! *db* ["select 123 as x"])
+                              rs (<query! *db* ["select $1::text as t" (:x (first rs))])]
+                             (:t (first rs)))))))))
