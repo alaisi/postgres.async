@@ -10,23 +10,16 @@
     value
     default))
 
-(defn await [chan]
-  (let [[r err] (<!! chan)]
+(defn await [channel]
+  (let [[r err] (<!! channel)]
     (if err
       (throw err)
       r)))
-
 
 (defn create-tables [db]
   (await (<execute! db ["drop table if exists clj_pg_test"]))
   (await (<execute! db ["create table clj_pg_test (
                            id serial, t varchar(10))"])))
-
-(defn await [chan]
-  (let [[r err] (<!! chan)]
-    (if err
-      (throw err)
-      r)))
 
 (defn db-fixture [f]
   (binding [*db* (open-db {:hostname (env "PG_HOST" "localhost")
