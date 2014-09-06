@@ -10,14 +10,23 @@
     value
     default))
 
+(defn await [chan]
+  (let [[r err] (<!! chan)]
+    (if err
+      (throw err)
+      r)))
+
+
 (defn create-tables [db]
-  (let [[_ err] (<!! (go (dosql
-                          [_ (<execute! db ["drop table if exists clj_pg_test"])
-                           _ (<execute! db ["create table clj_pg_test (
-                                              id serial, t varchar(10)
-                                            )"])])))]
-        (if err
-          (throw err))))
+  (await (<execute! db ["drop table if exists clj_pg_test"]))
+  (await (<execute! db ["create table clj_pg_test (
+                           id serial, t varchar(10))"])))
+
+(defn await [chan]
+  (let [[r err] (<!! chan)]
+    (if err
+      (throw err)
+      r)))
 
 (defn db-fixture [f]
   (binding [*db* (open-db {:hostname (env "PG_HOST" "localhost")
@@ -35,15 +44,15 @@
 
 (deftest queries
   (testing "<query! returns rows as map"
-    (let [[rs err] (<!! (<query! *db* ["select 1 as x"]))]
+    (let [rs (await (<query! *db* ["select 1 as x"]))]
       (is (= 1 (get-in rs [0 :x]))))))
 
 (deftest inserts
   (testing "insert return row count"
-    (let [[rs err] (<!! (<insert! *db* {:table "clj_pg_test"} {:t "x"}))]
+    (let [rs (await (<insert! *db* {:table "clj_pg_test"} {:t "x"}))]
       (is (= 1 (:updated rs)))))
   (testing "insert with returning returns generated keys"
-    (let [[rs err] (<!! (<insert! *db* {:table "clj_pg_test" :returning "id"} {:t "y"}))]
+    (let [rs (await (<insert! *db* {:table "clj_pg_test" :returning "id"} {:t "y"}))]
       (is (get-in rs [:rows 0 :id])))))
 
 (deftest sql-macro
