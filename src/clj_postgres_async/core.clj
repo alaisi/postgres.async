@@ -59,13 +59,17 @@
           f))
 
 (defn- create-update-sql [spec data]
-  (let [where  (:where spec)
+  (let [where (:where spec)
         cols   (for [e data] (-> e (first) (name)))
-        params (range (count where) (+ (count where) (count data)))]
+        params (for [i (range (count where) (+ (count where) (count data)))]
+                 (str "$" i))
+        ret   (:returning spec)]
     (str "UPDATE " (:table spec)
-         " SET "   (string/join ", " (map #(str (first %1) " = $" (second %1))
-                                          (partition 2 (interleave cols params))))
-         " WHERE " (first where))))
+         " SET (" (string/join "," cols)
+         ")=(" (string/join "," params) ")"
+         " WHERE " (first where)
+         (when ret
+           (str " RETURNING " ret)))))
 
 (defn update! [db spec data f]
   (execute! db (flatten [(create-update-sql spec data)

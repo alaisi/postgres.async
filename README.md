@@ -36,7 +36,7 @@ Asynchronous PostgreSQL Clojure library
 (<!! (<update! db {:table "users" :where ["id=$1" 1001}} {:price 6}))
 ; [{:updated 1, :rows []} nil]
 
-(<!! (<execute! d ["select 1 as anything"]))
+(<!! (<execute! db ["select 1 as anything"]))
 ; [{:updated 0, :rows [{:anything 1}]} nil]
 
 ;; Asynchronous composition! dosql returns [nil exception] on first error
