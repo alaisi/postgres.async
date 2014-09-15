@@ -2,9 +2,17 @@
   (:require [clojure.string :as string]
             [clojure.core.async :refer [chan put! go <!] :as async])
   (:import [com.github.pgasync ConnectionPoolBuilder]
-           [com.github.pgasync.callback ErrorHandler ResultHandler
-            TransactionHandler TransactionCompletedHandler])
-  (:gen-class))
+           [com.github.pgasync.impl Oid]
+           [com.github.pgasync.impl.conversion DataConverter]
+           [java.util.function Consumer]))
+
+(defmacro ^:private consumer-fn [[param] body]
+  `(reify Consumer (accept [_# ~param]
+                     (~@body))))
+
+(defmulti from-pg-value (fn [oid value] oid))
+(defprotocol IPgParameter
+  (to-pg-value [value]))
 
 (defn open-db [{:keys [hostname port username password database pool-size]}]
   (-> (ConnectionPoolBuilder.)
@@ -14,6 +22,11 @@
       (.username username)
       (.password password)
       (.poolSize (or pool-size 25))
+      (.dataConverter (proxy [DataConverter] []
+                        (toConvertable [oid value]
+                          (from-pg-oid oid value))
+                        (fromConvertable [value]
+                          (to-pg-value value))))
       (.build)))
 
 (defn close-db! [db]
@@ -32,12 +45,11 @@
     {:updated (.updatedRows result) :rows (into [] rows)}))
 
 (defn execute! [db [sql & params] f]
-  (let [handler (reify
-                  ResultHandler (onResult [_ r]
-                                  (f [(result->map r) nil]))
-                  ErrorHandler (onError [_ t]
-                                 (f [nil t])))]
-    (.query db sql params handler handler)))
+  (.query db sql params
+          (consumer-fn [rs]
+                       (f [(result->map rs) nil]))
+          (consumer-fn [exception]
+                       (f [nil exception]))))
 
 (defn query! [db sql f]
   (execute! db sql (fn [[rs err]]
@@ -76,28 +88,25 @@
           f))
 
 (defn begin! [db f]
-  (let [handler (reify
-                  TransactionHandler (onBegin [_ tx]
-                                       (f [tx nil]))
-                  ErrorHandler (onError [_ t]
-                                 (f [nil t])))]
-    (.begin db handler handler)))
-
-(defn- complete-tx [tx completion-fn f]
-  (let [handler (reify
-                  TransactionCompletedHandler (onComplete [_]
-                                       (f [true nil]))
-                  ErrorHandler (onError [_ t]
-                                 (f [nil t])))]
-    (completion-fn handler)))
+  (.begin db
+          (consumer-fn [tx]
+                       (f [tx nil]))
+          (consumer-fn [exception]
+                       (f [nil exception]))))
 
 (defn commit! [tx f]
-  (complete-tx tx #(.commit tx %1 %1) f))
+  (.commit tx
+           #(f [true nil])
+           (consumer-fn [exception]
+                        (f [nil exception]))))
 
 (defn rollback! [tx f]
-  (complete-tx tx #(.rollback tx %1 %1) f))
+  (.rollback tx
+             #(f [true nil])
+             (consumer-fn [exception]
+                          (f [nil exception]))))
 
-(defmacro defasync [name args]
+(defmacro ^:private defasync [name args]
   `(defn ~name [~@args]
      (let [c# (chan 1)]
        (~(symbol (subs (str name) 1)) ~@args #(put! c# %))

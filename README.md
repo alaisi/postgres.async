@@ -51,5 +51,17 @@ Asynchronous PostgreSQL client for Clojure
 
 (close-db! db)
 ; nil
+
+;; Extension points for custom column types
+(require '[cheshire.core :as json])
+
+(defmethod from-pg-value Oid/JSON [oid value]
+  (json/parse-string value))
+
+(extend-protocol IPgParameter 
+  clojure.lang.IPersistentMap
+  (to-pg-value [value]
+    (.getBytes (json/generate-string value))))
+
 ```
 
