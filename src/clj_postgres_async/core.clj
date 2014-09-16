@@ -24,7 +24,7 @@
       (.poolSize (or pool-size 25))
       (.dataConverter (proxy [DataConverter] []
                         (toConvertable [oid value]
-                          (from-pg-oid oid value))
+                          (from-pg-value oid value))
                         (fromConvertable [value]
                           (to-pg-value value))))
       (.build)))

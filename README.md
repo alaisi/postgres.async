@@ -56,7 +56,7 @@ Asynchronous PostgreSQL client for Clojure
 (require '[cheshire.core :as json])
 
 (defmethod from-pg-value Oid/JSON [oid value]
-  (json/parse-string value))
+  (json/parse-string (String. value))
 
 (extend-protocol IPgParameter 
   clojure.lang.IPersistentMap
