@@ -1,5 +1,5 @@
 (ns clj-postgres-async.core
-  (:require [clj-postgres-async.impl.impl :refer :all])
+  (:require [clj-postgres-async.impl.impl :refer [consumer-fn defasync] :as pg])
   (:import [com.github.pgasync ConnectionPoolBuilder]
            [com.github.pgasync.impl.conversion DataConverter]))
 
@@ -34,7 +34,7 @@
   "Executes an sql statement and calls (f result-set exception) on completion"
   (.query db sql params
           (consumer-fn [rs]
-                       (f (result->map rs (.getColumns rs)) nil))
+                       (f (pg/result->map rs (.getColumns rs)) nil))
           (consumer-fn [exception]
                        (f nil exception))))
 
@@ -47,14 +47,14 @@
 
 (defn insert! [db spec data f]
   "Executes an sql insert and calls (f result-set exception) on completion"
-  (execute! db (list* (create-insert-sql spec data)
+  (execute! db (list* (pg/create-insert-sql spec data)
                     (for [e data] (second e)))
           f))
 
 
 (defn update! [db spec data f]
   "Executes an sql update and calls (f result-set exception) on completion"
-  (execute! db (flatten [(create-update-sql spec data)
+  (execute! db (flatten [(pg/create-update-sql spec data)
                         (rest (:where spec))
                         (for [e data] (second e))])
           f))
@@ -92,7 +92,7 @@
 (defmacro dosql [bindings & forms]
   "Takes values from channels returned by db functions and handles errors"
   (let [err (gensym "e")]
-    `(let [~@(async-sql-bindings bindings err)]
+    `(let [~@(pg/async-sql-bindings bindings err)]
        (if ~err
          [nil ~err]
          [(do ~@forms) nil]))))
