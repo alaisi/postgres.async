@@ -48,8 +48,8 @@
 (deftest sql-macro
   (testing "dosql returns last form"
     (is (= "123" (wait (go (dosql
-                             [tx (<begin! *db*)
-                              rs (<query! tx ["select 123 as x"])
-                              rs (<query! tx ["select $1::text as t" (:x (first rs))])
-                              _  (<commit! tx)]
-                             (:t (first rs)))))))))
+                            [tx (<begin! *db*)
+                             rs (<query! tx ["select 123 as x"])
+                             rs (<query! tx ["select $1::text as t" (:x (first rs))])
+                             _  (<commit! tx)]
+                            (:t (first rs)))))))))
