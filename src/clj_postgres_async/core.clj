@@ -45,17 +45,24 @@
                      (f (:rows rs) err))))
 
 
-(defn insert! [db spec data f]
-  "Executes an sql insert and calls (f result-set exception) on completion"
-  (execute! db (list* (pg/create-insert-sql spec data)
+(defn insert! [db sql-spec data f]
+  "Executes an sql insert and calls (f result-set exception) on completion.
+   Spec format is
+     :table - table name
+     :returning - sql string"
+  (execute! db (list* (pg/create-insert-sql sql-spec data)
                     (for [e data] (second e)))
           f))
 
 
-(defn update! [db spec data f]
-  "Executes an sql update and calls (f result-set exception) on completion"
-  (execute! db (flatten [(pg/create-update-sql spec data)
-                        (rest (:where spec))
+(defn update! [db sql-spec data f]
+  "Executes an sql update and calls (f result-set exception) on completion.
+   Spec format is
+     :table - table name
+     :returning - sql string
+     :where - [sql & params]"
+  (execute! db (flatten [(pg/create-update-sql sql-spec data)
+                        (rest (:where sql-spec))
                         (for [e data] (second e))])
           f))
 
@@ -90,7 +97,8 @@
 (defasync <rollback! [tx])
 
 (defmacro dosql [bindings & forms]
-  "Takes values from channels returned by db functions and handles errors"
+  "Takes values from channels returned by db functions and returns [nil exception]
+   on first error. Returns [result-of-body nil] on success."
   (let [err (gensym "e")]
     `(let [~@(pg/async-sql-bindings bindings err)]
        (if ~err

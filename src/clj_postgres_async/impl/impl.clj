@@ -21,10 +21,10 @@
                            (reduce (partial row->map row) {} columns))
                          result))}))
 
-(defn list-columns [data]
+(defn- list-columns [data]
   (for [e data] (-> e (first) (name))))
 
-(defn list-params [start end]
+(defn- list-params [start end]
   (for [i (range start end)] (str "$" i)))
 
 (defn create-insert-sql [{:keys [table returning]} data]
