@@ -1,5 +1,5 @@
-clj-postgres-async
-==================
+postgres.async
+==============
 
 Asynchronous PostgreSQL client for Clojure
 
@@ -7,7 +7,7 @@ Asynchronous PostgreSQL client for Clojure
 
 ```clojure
 (ns example.core
-  (:require [clj-postgres-async.core :refer :all]
+  (:require [postgres.async :refer :all]
             [clojure.core.async :refer [go <!!]]))
 
 
@@ -33,13 +33,13 @@ Asynchronous PostgreSQL client for Clojure
 (<!! (<query! db ["select * from foobar"]))
 ; [nil #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
 
-(<!! (<update! db {:table "users" :where ["id=$1" 1001}} {:price 6}))
+(<!! (<update! db {:table "users" :where ["id = $1" 1001}} {:price 6}))
 ; [{:updated 1, :rows []} nil]
 
 (<!! (<execute! db ["select 1 as anything"]))
 ; [{:updated 0, :rows [{:anything 1}]} nil]
 
-;; Asynchronous composition! dosql returns [nil exception] on first error
+;; Asynchronous composition. dosql returns [nil exception] on first error
 (<!! (go
        (dosql [tx (<begin! db)
                rs (<insert! tx {:table products :returning "id"} {:name "saw"})

@@ -1,7 +1,11 @@
-(ns clj-postgres-async.core
-  (:require [clj-postgres-async.impl.impl :refer [consumer-fn defasync] :as pg])
-  (:import [com.github.pgasync ConnectionPoolBuilder]
+(ns postgres.async
+  (:require [postgres.async.impl :refer [consumer-fn defasync] :as pg])
+  (:import [com.github.pgasync
+            QueryExecutor TransactionExecutor Transaction
+            ConnectionPool ConnectionPoolBuilder]
            [com.github.pgasync.impl.conversion DataConverter]))
+
+(set! *warn-on-reflection* true)
 
 (defmulti from-pg-value (fn [oid value] oid))
 (defprotocol IPgParameter
@@ -26,24 +30,22 @@
       (.dataConverter (create-converter))
       (.build)))
 
-(defn close-db! [db]
+(defn close-db! [^ConnectionPool db]
   "Closes a db connection pool"
   (.close db))
 
-(defn execute! [db [sql & params] f]
+(defn execute! [^QueryExecutor db [sql & params] f]
   "Executes an sql statement and calls (f result-set exception) on completion"
   (.query db sql params
           (consumer-fn [rs]
-                       (f (pg/result->map rs (.getColumns rs)) nil))
+                       (f (pg/result->map rs) nil))
           (consumer-fn [exception]
                        (f nil exception))))
-
 
 (defn query! [db sql f]
   "Executes an sql query and calls (f rows exception) on completion"
   (execute! db sql (fn [rs err]
                      (f (:rows rs) err))))
-
 
 (defn insert! [db sql-spec data f]
   "Executes an sql insert and calls (f result-set exception) on completion.
@@ -53,7 +55,6 @@
   (execute! db (list* (pg/create-insert-sql sql-spec data)
                     (for [e data] (second e)))
           f))
-
 
 (defn update! [db sql-spec data f]
   "Executes an sql update and calls (f result-set exception) on completion.
@@ -66,7 +67,7 @@
                         (for [e data] (second e))])
           f))
 
-(defn begin! [db f]
+(defn begin! [^TransactionExecutor db f]
   "Begins a transaction and calls (f transaction exception) on completion"
   (.begin db
           (consumer-fn [tx]
@@ -74,14 +75,14 @@
           (consumer-fn [exception]
                        (f nil exception))))
 
-(defn commit! [tx f]
+(defn commit! [^Transaction tx f]
   "Commits an active transaction and calls (f true exception) on completion"
   (.commit tx
            #(f true nil)
            (consumer-fn [exception]
                         (f nil exception))))
 
-(defn rollback! [tx f]
+(defn rollback! [^Transaction tx f]
   "Rollbacks an active transaction and calls (f true exception) on completion"
   (.rollback tx
              #(f true nil)
@@ -104,4 +105,3 @@
        (if ~err
          [nil ~err]
          [(do ~@forms) nil]))))
-

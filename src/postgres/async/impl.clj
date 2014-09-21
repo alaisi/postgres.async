@@ -1,7 +1,11 @@
-(ns clj-postgres-async.impl.impl
+(ns postgres.async.impl
   (:require [clojure.string :as string]
             [clojure.core.async :refer [chan put! go <!]])
-  (:import [java.util.function Consumer]))
+  (:import [java.util.function Consumer]
+           [com.github.pgasync ResultSet]
+           [com.github.pgasync.impl PgRow]))
+
+(set! *warn-on-reflection* true)
 
 (defmacro defasync [name args]
   `(defn ~name [~@args]
@@ -13,11 +17,12 @@
   `(reify Consumer (accept [_# ~param]
                      (~@body))))
 
-(defn result->map [result columns]
-  (letfn [(row->map [row rowmap col]
+(defn result->map [^ResultSet result]
+  (let [columns (.getColumns result)
+        row->map (fn [^PgRow row rowmap ^String col]
             (assoc rowmap (keyword (.toLowerCase col)) (.get row col)))]
     {:updated (.updatedRows result)
-     :rows (into [] (map (fn [row]
+     :rows (vec (map (fn [row]
                            (reduce (partial row->map row) {} columns))
                          result))}))
 
@@ -54,7 +59,3 @@
                     `(if ~err [nil ~err] (<! ~f)))
                   (take-nth 2 (rest bindings)))]
     (list* [err err] [nil nil] (interleave vars fs))))
-
-
-
-

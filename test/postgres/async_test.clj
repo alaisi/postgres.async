@@ -1,7 +1,7 @@
-(ns clj-postgres-async.core-test
+(ns postgres.async-test
   (:require [clojure.test :refer :all]
             [clojure.core.async :refer [<!! go]]
-            [clj-postgres-async.core :refer :all]))
+            [postgres.async :refer :all]))
 
 (def ^:private ^:dynamic *db*)
 
