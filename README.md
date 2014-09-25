@@ -9,7 +9,7 @@ TODO: clojars coordinates
 
 ## Setting up a connection pool
 
-A pool of connections to PostgreSQL backend is created with `open-db`. Each connection *pool* start a single I/O thread used in communicating with PostgreSQL backend.
+A pool of connections to PostgreSQL backend is created with `open-db`. Each connection *pool* starts a single I/O thread used in communicating with PostgreSQL backend.
 
 ```clojure
 (require '[postgres.async :refer :all])
@@ -26,7 +26,7 @@ The connection pool is closed with `close-db!`. This closes all open connections
 
 ```clojure
 (close-db! db)
-```clojure
+```
 
 ## Running SQL queries
 
