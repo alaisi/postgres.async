@@ -32,7 +32,7 @@ The connection pool is closed with `close-db!`. This closes all open connections
 
 Queries are executed with callback-based functions `query!` `insert!` `update!` `execute!` and [`core.async`](https://github.com/clojure/core.async) channel-based functions `<query!` `<insert!` `<update!` `<execute!`.
 
-Channel-based functions return a channel where query result is put in vector of [result-set exception].
+Channel-based functions return a channel where query result is put in vector of `[result-set exception]`.
 
 ### execute! and query!
 
@@ -41,7 +41,7 @@ All other query functions delegate to `execute!`. This takes a db, a vector of s
 ```clojure
 ;; callback
 (execute! db ["select $1::text" "hello world"] (fn [rs err]
-                                                   (prinln rs err))
+                                                   (println rs err))
 ; nil
 
 ;; async channel
