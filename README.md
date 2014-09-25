@@ -3,10 +3,6 @@ postgres.async
 
 Asynchronous PostgreSQL client for Clojure.
 
-## Download
-
-TODO: clojars coordinates
-
 ## Setting up a connection pool
 
 A pool of connections to PostgreSQL backend is created with `open-db`. Each connection *pool* starts a single I/O thread used in communicating with PostgreSQL backend.
@@ -45,10 +41,10 @@ All other query functions delegate to `execute!`. This takes a db, a vector of s
 ; nil
 
 ;; async channel
-(<!! (<query! db ["select name, price from products where id = $1" 1001]))
+(<!! (<execute! db ["select name, price from products where id = $1" 1001]))
 ; [{:updated 0, :rows [{:id 1001, :name "hammer", :price 10]]} nil]
 
-(<!! (<query! db ["select * from foobar"]))
+(<!! (<execute! db ["select * from foobar"]))
 ; [nil #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
 ```
 
@@ -76,7 +72,7 @@ Insert is executed with an sql-spec that supports keys `:table` and `:returning`
 
 ### update!
 
-Update is executed with an sql-spec that supports keys `:table` `:retuning` and `where`.
+Update is executed with an sql-spec that supports keys `:table` `:retuning` and `:where`.
 
 ```clojure
 (<!! (<update! db {:table "users" :where ["id = $1" 1001}} {:price 6}))
@@ -85,7 +81,7 @@ Update is executed with an sql-spec that supports keys `:table` `:retuning` and 
 
 ## Composition
 
-Channel-returning functions can be composed with `dosql` macro that returns [result-of-body exception].
+Channel-returning functions can be composed with `dosql` macro that returns `[result-of-body exception]`.
 
 ```clojure
 (<!! (go
@@ -100,78 +96,18 @@ Channel-returning functions can be composed with `dosql` macro that returns [res
 
 ## Custom column types
 
+Support for custom types can be added by extending `IPgParameter` protocol and `from-pg-value` multimethod.
+
 ```clojure
 (require '[cheshire.core :as json])
-
-(defmethod from-pg-value com.github.pgasync.impl.Oid/JSON [oid value]
-  (json/parse-string (String. value))
 
 (extend-protocol IPgParameter 
   clojure.lang.IPersistentMap
   (to-pg-value [value]
     (.getBytes (json/generate-string value))))
 
-```
-
-## Full example
-
-```clojure
-(ns example.core
-  (:require [postgres.async :refer :all]
-            [clojure.core.async :refer [go <!!]]))
-
-
-(def db (open-db {:hostname "localhost"
-                  :port 5432
-                  :database "postgres"
-                  :username "postgres"
-                  :password "postgres"
-                  :pool-size 20}))
-
-(<!! (<insert! db {:table "products"} {:name "screwdriver" :price 15}))
-; [{:updated 1, :rows []} nil]
-
-(<!! (<insert! db {:table "products" :returning "id"} {:name "hammer" :price 5}))
-; [{:updated 1, :rows [{:id 1001}]} nil]
-
-(<!! (<query! db ["select name, price from products"]))
-; [[{:id 1000, :name "screwdriver", :price 15} {:id 1001, :name "hammer", :price 10] nil]
-
-(<!! (<query! db ["select name, price from products where id = $1" 1001]))
-; [[{:id 1001, :name "hammer", :price 10] nil]
-
-(<!! (<query! db ["select * from foobar"]))
-; [nil #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
-
-(<!! (<update! db {:table "users" :where ["id = $1" 1001}} {:price 6}))
-; [{:updated 1, :rows []} nil]
-
-(<!! (<execute! db ["select 1 as anything"]))
-; [{:updated 0, :rows [{:anything 1}]} nil]
-
-;; Asynchronous composition. dosql returns [nil exception] on first error
-(<!! (go
-       (dosql [tx (<begin! db)
-               rs (<insert! tx {:table products :returning "id"} {:name "saw"})
-               _  (<insert! tx {:table promotions} {:product_id (get-in rs [:rows 0 :id])})
-               rs (<query!  tx ["select * from promotions"])
-               _  (<commit! tx)]
-            {:now-promoting rs})))
-; [{:now-promoting [{:id 1, product_id 1002}]} nil]
-
-(close-db! db)
-; nil
-
-;; Extension points for custom column types
-(require '[cheshire.core :as json])
-
 (defmethod from-pg-value com.github.pgasync.impl.Oid/JSON [oid value]
   (json/parse-string (String. value))
-
-(extend-protocol IPgParameter 
-  clojure.lang.IPersistentMap
-  (to-pg-value [value]
-    (.getBytes (json/generate-string value))))
-
 ```
+
 
