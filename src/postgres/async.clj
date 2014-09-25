@@ -1,8 +1,7 @@
 (ns postgres.async
   (:require [postgres.async.impl :refer [consumer-fn defasync] :as pg])
-  (:import [com.github.pgasync
-            QueryExecutor TransactionExecutor Transaction
-            ConnectionPool ConnectionPoolBuilder]
+  (:import [com.github.pgasync Db ConnectionPoolBuilder
+            QueryExecutor TransactionExecutor Transaction]
            [com.github.pgasync.impl.conversion DataConverter]))
 
 (set! *warn-on-reflection* true)
@@ -18,8 +17,9 @@
     (fromConvertable [value]
       (to-pg-value value))))
 
-(defn open-db [{:keys [hostname port username password database pool-size]}]
+(defn open-db
   "Creates a db connection pool"
+  [{:keys [hostname port username password database pool-size]}]
   (-> (ConnectionPoolBuilder.)
       (.hostname hostname)
       (.port (or port 5432))
@@ -30,60 +30,68 @@
       (.dataConverter (create-converter))
       (.build)))
 
-(defn close-db! [^ConnectionPool db]
+(defn close-db!
   "Closes a db connection pool"
+  [^Db db]
   (.close db))
 
-(defn execute! [^QueryExecutor db [sql & params] f]
+(defn execute!
   "Executes an sql statement and calls (f result-set exception) on completion"
+  [^QueryExecutor db [sql & params] f]
   (.query db sql params
           (consumer-fn [rs]
                        (f (pg/result->map rs) nil))
           (consumer-fn [exception]
                        (f nil exception))))
 
-(defn query! [db sql f]
+(defn query!
   "Executes an sql query and calls (f rows exception) on completion"
+  [db sql f]
   (execute! db sql (fn [rs err]
                      (f (:rows rs) err))))
 
-(defn insert! [db sql-spec data f]
+(defn insert!
   "Executes an sql insert and calls (f result-set exception) on completion.
    Spec format is
      :table - table name
      :returning - sql string"
+  [db sql-spec data f]
   (execute! db (list* (pg/create-insert-sql sql-spec data)
                     (for [e data] (second e)))
           f))
 
-(defn update! [db sql-spec data f]
+(defn update!
   "Executes an sql update and calls (f result-set exception) on completion.
    Spec format is
      :table - table name
      :returning - sql string
      :where - [sql & params]"
+  [db sql-spec data f]
   (execute! db (flatten [(pg/create-update-sql sql-spec data)
                         (rest (:where sql-spec))
                         (for [e data] (second e))])
           f))
 
-(defn begin! [^TransactionExecutor db f]
+(defn begin!
   "Begins a transaction and calls (f transaction exception) on completion"
+  [^TransactionExecutor db f]
   (.begin db
           (consumer-fn [tx]
                        (f tx nil))
           (consumer-fn [exception]
                        (f nil exception))))
 
-(defn commit! [^Transaction tx f]
+(defn commit!
   "Commits an active transaction and calls (f true exception) on completion"
+  [^Transaction tx f]
   (.commit tx
            #(f true nil)
            (consumer-fn [exception]
                         (f nil exception))))
 
-(defn rollback! [^Transaction tx f]
+(defn rollback!
   "Rollbacks an active transaction and calls (f true exception) on completion"
+  [^Transaction tx f]
   (.rollback tx
              #(f true nil)
              (consumer-fn [exception]
@@ -97,9 +105,10 @@
 (defasync <commit!   [tx])
 (defasync <rollback! [tx])
 
-(defmacro dosql [bindings & forms]
+(defmacro dosql
   "Takes values from channels returned by db functions and returns [nil exception]
    on first error. Returns [result-of-body nil] on success."
+  [bindings & forms]
   (let [err (gensym "e")]
     `(let [~@(pg/async-sql-bindings bindings err)]
        (if ~err

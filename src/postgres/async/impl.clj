@@ -50,8 +50,9 @@
        (when returning
          (str " RETURNING " returning))))
 
-(defn async-sql-bindings [bindings err]
+(defn async-sql-bindings
   "Converts bindings x (f) to [x err] (if [err] [nil err] (<! (f)))"
+  [bindings err]
   (let [vars (map (fn [v]
                     [v err])
                   (take-nth 2 bindings))

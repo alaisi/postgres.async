@@ -1,9 +1,66 @@
 postgres.async
 ==============
 
-Asynchronous PostgreSQL client for Clojure
+Asynchronous PostgreSQL client for Clojure.
 
-## Usage
+## Download
+
+TODO: clojars coordinates
+
+## Setting up a connection pool
+
+A pool of connections to PostgreSQL backend is created with `open-db`. Each connection *pool* start a single I/O thread used in communicating with PostgreSQL backend.
+
+```clojure
+(require '[postgres.async :refer :all])
+
+(def db (open-db {:hostname "db.example.com"
+                  :port 5432 ; default
+                  :database "exampledb"
+                  :username "user"
+                  :password "pass"
+                  :pool-size 25})) ; default
+```
+
+The connection pool is closed with `close-db!`. This closes all open connections and stops the pool I/O thread.
+
+```clojure
+(close-db! db)
+```clojure
+
+## Running SQL queries
+
+Queries are executed with callback-based functions `query!` `insert!` `update!` `execute!` and core.async channel-based functions `<query!` `<insert!` `<update!` `<execute!`.
+
+Channel-based functions return a channel where query result is put in vector of [result-set exception].
+
+### execute! and query!
+
+All other query functions delegate to `execute!`. This takes a db, a vector of sql string and parameters plus a callback with arity of two.
+
+```clojure
+;; callback
+(execute! db ["select $1::text" "hello world"] (fn [rs err]
+                                                   (prinln rs err))
+; nil
+
+;; async channel
+(<!! (<execute! db ["select $1::int4 + $2::int4 as sum" 100 200]))
+; [{:updated 0, :rows [{:sum 300}]} nil]
+```
+
+`query!` passes only `:rows` to callback.
+
+```clojure
+(<!! (<query! db ["select name, price from products"]))
+; [[{:id 1000, :name "screwdriver", :price 15} {:id 1001, :name "hammer", :price 10] nil]
+```
+
+### insert!
+
+### update!
+
+## Example
 
 ```clojure
 (ns example.core
