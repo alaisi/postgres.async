@@ -125,4 +125,7 @@ Support for custom types can be added by extending `IPgParameter` protocol and `
   (json/parse-string (String. value))
 ```
 
+## Dependencies
 
+* [postgres-async-driver](https://github.com/alaisi/postgres-async-driver)
+* [core.async](https://github.com/clojure/core.async)
