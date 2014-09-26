@@ -36,11 +36,11 @@
                                (str "$" i)))
        ")"))
 
-(defn- list-params-seq [datas]
-  (if (map? datas)
-    (list-params 1 (inc (count datas)))
-    (let [size (count (first datas))
-          max  (inc (* (count datas) size))]
+(defn- list-params-seq [data]
+  (if (map? data)
+    (list-params 1 (inc (count data)))
+    (let [size (count (first data))
+          max  (inc (* (count data) size))]
       (string/join ", " (map
                          #(str "(" (string/join ", " %) ")")
                          (partition size (for [i (range 1 max)]
