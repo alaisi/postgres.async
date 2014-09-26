@@ -5,8 +5,6 @@
            [com.github.pgasync ResultSet]
            [com.github.pgasync.impl PgRow]))
 
-(set! *warn-on-reflection* true)
-
 (defmacro defasync [name args]
   `(defn ~name [~@args]
      (let [c# (chan 1)]

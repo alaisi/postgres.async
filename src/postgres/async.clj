@@ -4,8 +4,6 @@
             QueryExecutor TransactionExecutor Transaction]
            [com.github.pgasync.impl.conversion DataConverter]))
 
-(set! *warn-on-reflection* true)
-
 (defmulti from-pg-value (fn [oid value] oid))
 (defprotocol IPgParameter
   (to-pg-value [value]))
