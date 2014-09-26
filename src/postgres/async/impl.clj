@@ -28,11 +28,13 @@
 
 (defn- list-columns [data]
   (if (map? data)
-    (map name (keys data))
+    (str " (" (string/join ", " (map name (keys data))) ") ")
     (recur (first data))))
 
 (defn- list-params [start end]
-  (for [i (range start end)] (str "$" i)))
+  (str "(" (string/join ", " (for [i (range start end)]
+                               (str "$" i)))
+       ")"))
 
 (defn- list-params-seq [datas]
   (if (map? datas)
@@ -41,23 +43,24 @@
           max  (inc (* (count datas) size))]
       (string/join ", " (map
                          #(str "(" (string/join ", " %) ")")
-                         (partition size (list-params 1 max)))))))
+                         (partition size (for [i (range 1 max)]
+                                           (str "$" i))))))))
 
-(defn create-insert-sql [{:keys [table returning]} datas]
-  (str "INSERT INTO " table " ("
-       (string/join ", " (list-columns datas))
-       ") VALUES "
-       (list-params-seq datas)
+(defn create-insert-sql [{:keys [table returning]} data]
+  (str "INSERT INTO " table
+       (list-columns data)
+       " VALUES "
+       (list-params-seq data)
        (when returning
          (str " RETURNING " returning))))
 
 (defn create-update-sql [{:keys [table returning where]} data]
   (str "UPDATE " table
-       " SET ("
-       (string/join "," (list-columns data))
-       ")=("
-       (string/join "," (list-params (count where) (+ (count where) (count data))))
-       ") WHERE " (first where)
+       " SET "
+       (list-columns data)
+       " = "
+       (list-params (count where) (+ (count where) (count data)))
+       " WHERE " (first where)
        (when returning
          (str " RETURNING " returning))))
 

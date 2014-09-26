@@ -71,7 +71,7 @@
   [db sql-spec data f]
   (execute! db (flatten [(pg/create-update-sql sql-spec data)
                         (rest (:where sql-spec))
-                        (for [e data] (second e))])
+                        (vals data)])
           f))
 
 (defn begin!
