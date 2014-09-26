@@ -72,10 +72,12 @@ Insert is executed with an sql-spec that supports keys `:table` and `:returning`
 
 Multiple rows can be inserted by passing a sequence to `insert!`.
 
+```clojure
 (<!! (<insert! db {:table "products" :returning "id"}
                   [{:name "hammer" :price 5}
                    {:name "nail"   :price 1}]))
 ; [{:updated 2, :rows [{:id 1001} {:id 1002]} nil]
+```
 
 ### update!
 
