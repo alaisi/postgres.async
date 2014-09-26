@@ -57,7 +57,9 @@
      :returning - sql string"
   [db sql-spec data f]
   (execute! db (list* (pg/create-insert-sql sql-spec data)
-                    (for [e data] (second e)))
+                      (if (map? data)
+                        (vals data)
+                        (flatten (map vals data))))
           f))
 
 (defn update!

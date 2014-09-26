@@ -4,6 +4,7 @@
             [postgres.async :refer :all]))
 
 (def ^:private ^:dynamic *db*)
+(def table "clj_pg_test")
 
 (defn- wait [channel]
   (let [[r err] (<!! channel)]
@@ -12,9 +13,9 @@
       r)))
 
 (defn- create-tables [db]
-  (wait (<execute! db ["drop table if exists clj_pg_test"]))
-  (wait (<execute! db ["create table clj_pg_test (
-                           id serial, t varchar(10))"])))
+  (wait (<execute! db [(str "drop table if exists " table)]))
+  (wait (<execute! db [(str "create table " table " (
+                           id serial, t varchar(10))")])))
 
 (defn- db-fixture [f]
   (letfn [(env [name default]
@@ -38,12 +39,30 @@
       (is (= 1 (get-in rs [0 :x]))))))
 
 (deftest inserts
-  (testing "insert return row count"
-    (let [rs (wait (<insert! *db* {:table "clj_pg_test"} {:t "x"}))]
+  (testing "insert returns row count"
+    (let [rs (wait (<insert! *db* {:table table} {:t "x"}))]
       (is (= 1 (:updated rs)))))
   (testing "insert with returning returns generated keys"
-    (let [rs (wait (<insert! *db* {:table "clj_pg_test" :returning "id"} {:t "y"}))]
-      (is (get-in rs [:rows 0 :id])))))
+    (let [rs (wait (<insert! *db* {:table table :returning "id"} {:t "y"}))]
+      (is (get-in rs [:rows 0 :id]))))
+  (testing "multiple rows can be inserted"
+    (let [rs (wait (<insert! *db*
+                             {:table table :returning "id"}
+                             [{:t "foo"} {:t "bar"}]))]
+      (is (= 2 (:updated rs)))
+      (is (= 2 (count (:rows rs)))))))
+
+(deftest updates
+  (testing "update returns row count"
+    (let [rs (wait (<insert! *db*
+                             {:table table :returning "id"}
+                             [{:t "update0"} {:t "update1"}]))
+          rs (wait (<update! *db*
+                             {:table table :where ["id in ($1, $2)"
+                                                   (get-in rs [:rows 0 :id])
+                                                   (get-in rs [:rows 1 :id])]}
+                             {:t "update2"}))]
+      (is (= 2 (:updated rs))))))
 
 (deftest sql-macro
   (testing "dosql returns last form"

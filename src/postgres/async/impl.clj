@@ -27,16 +27,27 @@
                          result))}))
 
 (defn- list-columns [data]
-  (for [e data] (-> e (first) (name))))
+  (if (map? data)
+    (map name (keys data))
+    (recur (first data))))
 
 (defn- list-params [start end]
   (for [i (range start end)] (str "$" i)))
 
-(defn create-insert-sql [{:keys [table returning]} data]
+(defn- list-params-seq [datas]
+  (if (map? datas)
+    (list-params 1 (inc (count datas)))
+    (let [size (count (first datas))
+          max  (inc (* (count datas) size))]
+      (string/join ", " (map
+                         #(str "(" (string/join ", " %) ")")
+                         (partition size (list-params 1 max)))))))
+
+(defn create-insert-sql [{:keys [table returning]} datas]
   (str "INSERT INTO " table " ("
-       (string/join ", " (list-columns data))
-       ") VALUES ("
-       (string/join ", " (list-params 1 (inc (count data)))) ")"
+       (string/join ", " (list-columns datas))
+       ") VALUES "
+       (list-params-seq datas)
        (when returning
          (str " RETURNING " returning))))
 

@@ -70,18 +70,31 @@ Insert is executed with an sql-spec that supports keys `:table` and `:returning`
 ; [{:updated 1, :rows [{:id 1001}]} nil]
 ```
 
+Multiple rows can be inserted by passing a sequence to `insert!`.
+
+(<!! (<insert! db {:table "products" :returning "id"}
+                  [{:name "hammer" :price 5}
+                   {:name "nail"   :price 1}]))
+; [{:updated 2, :rows [{:id 1001} {:id 1002]} nil]
+
 ### update!
 
-Update is executed with an sql-spec that supports keys `:table` `:retuning` and `:where`.
+Update is executed with an sql-spec that supports keys `:table` `:returning` and `:where`.
 
 ```clojure
 (<!! (<update! db {:table "users" :where ["id = $1" 1001}} {:price 6}))
 ; [{:updated 1, :rows []} nil]
 ```
 
+## Transactions
+
+Starting a transaction with `begin!` borrows a connection from the connection pool until `commit!`, `rollback!` or query failure. Transactional operations must be issued to the transaction instead of db.
+
+See composition below for example.
+
 ## Composition
 
-Channel-returning functions can be composed with `dosql` macro that returns `[result-of-body exception]`.
+Channel-returning functions can be composed with `dosql` macro that returns `[result-of-body first-exception]`.
 
 ```clojure
 (<!! (go
