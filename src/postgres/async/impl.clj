@@ -32,19 +32,18 @@
     (recur (first data))))
 
 (defn- list-params [start end]
-  (str "(" (string/join ", " (for [i (range start end)]
-                               (str "$" i)))
-       ")"))
+  (str "(" (string/join ", " (map (partial str "$")
+                                  (range start end))) ")"))
 
 (defn- list-params-seq [data]
   (if (map? data)
     (list-params 1 (inc (count data)))
-    (let [size (count (first data))
-          max  (inc (* (count data) size))]
+    (let [size   (count (first data))
+          max    (inc (* (count data) size))
+          params (map (partial str "$") (range 1 max))]
       (string/join ", " (map
                          #(str "(" (string/join ", " %) ")")
-                         (partition size (for [i (range 1 max)]
-                                           (str "$" i))))))))
+                         (partition size params))))))
 
 (defn create-insert-sql [{:keys [table returning]} data]
   (str "INSERT INTO " table
