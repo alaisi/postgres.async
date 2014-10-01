@@ -136,3 +136,4 @@ Support for custom types can be added by extending `IPgParameter` protocol and `
 
 * [postgres-async-driver](https://github.com/alaisi/postgres-async-driver)
 * [core.async](https://github.com/clojure/core.async)
+* Java 8
