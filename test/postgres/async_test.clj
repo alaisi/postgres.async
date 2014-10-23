@@ -7,10 +7,10 @@
 (def table "clj_pg_test")
 
 (defn- wait [channel]
-  (let [[r err] (<!! channel)]
-    (if err
-      (throw err)
-      r)))
+  (let [r (<!! channel)]
+    (if (instance? Throwable r)
+      (throw r))
+    r))
 
 (defn- create-tables [db]
   (wait (<execute! db [(str "drop table if exists " table)]))
@@ -71,4 +71,17 @@
                              rs (<query! tx ["select 123 as x"])
                              rs (<query! tx ["select $1::text as t" (:x (first rs))])
                              _  (<commit! tx)]
-                            (:t (first rs)))))))))
+                            (:t (first rs))))))))
+  (testing "dosql short-circuits on errors"
+    (let [e (Exception. "Oops!")
+          executed (atom 0)]
+      (is (= (try
+               (wait (go (dosql
+                          [_ (<query! *db* ["select 123 as t"])
+                           _ (go e)
+                           _ (swap! executed inc)]
+                          "Just hanging out")))
+               (catch Exception caught
+                 {:caught caught}))
+             {:caught e}))
+      (is (= @executed 0)))))
