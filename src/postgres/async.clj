@@ -1,5 +1,6 @@
 (ns postgres.async
-  (:require [postgres.async.impl :refer [consumer-fn defasync] :as pg])
+  (:require [postgres.async.impl :refer [consumer-fn defasync] :as pg]
+            [clojure.core.async :refer [<!]])
   (:import [com.github.pgasync Db ConnectionPoolBuilder
             QueryExecutor TransactionExecutor Transaction]
            [com.github.pgasync.impl.conversion DataConverter]))
@@ -106,11 +107,12 @@
 (defasync <rollback! [tx])
 
 (defmacro dosql
-  "Takes values from channels returned by db functions and returns [nil exception]
-   on first error. Returns [result-of-body nil] on success."
+  "Takes values from channels returned by db functions and returns exception
+   on first error. Returns the result of evaluating the given forms on success"
   [bindings & forms]
-  (let [err (gensym "e")]
-    `(let [~@(pg/async-sql-bindings bindings err)]
-       (if ~err
-         [nil ~err]
-         [(do ~@forms) nil]))))
+  (if-let [[l r & bindings] (not-empty bindings)]
+    `(let [~l (<! ~r)]
+       (if (instance? Throwable ~l)
+         ~l
+         (dosql ~bindings ~@forms)))
+    `(do ~@forms)))

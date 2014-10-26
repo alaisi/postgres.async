@@ -1,6 +1,6 @@
 (ns postgres.async.impl
   (:require [clojure.string :as string]
-            [clojure.core.async :refer [chan put! go <!]])
+            [clojure.core.async :refer [chan put! go]])
   (:import [java.util.function Consumer]
            [com.github.pgasync ResultSet]
            [com.github.pgasync.impl PgRow]))
@@ -8,7 +8,7 @@
 (defmacro defasync [name args]
   `(defn ~name [~@args]
      (let [c# (chan 1)]
-       (~(symbol (subs (str name) 1)) ~@args #(put! c# [%1 %2]))
+       (~(symbol (subs (str name) 1)) ~@args #(put! c# (or %2 %1)))
        c#)))
 
 (defmacro consumer-fn [[param] body]
@@ -60,14 +60,3 @@
        " WHERE " (first where)
        (when returning
          (str " RETURNING " returning))))
-
-(defn async-sql-bindings
-  "Converts bindings x (f) to [x err] (if [err] [nil err] (<! (f)))"
-  [bindings err]
-  (let [vars (map (fn [v]
-                    [v err])
-                  (take-nth 2 bindings))
-        fs   (map (fn [f]
-                    `(if ~err [nil ~err] (<! ~f)))
-                  (take-nth 2 (rest bindings)))]
-    (list* [err err] [nil nil] (interleave vars fs))))
