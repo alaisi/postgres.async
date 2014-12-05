@@ -1,4 +1,4 @@
-(defproject alaisi/postgres.async "0.2.0"
+(defproject alaisi/postgres.async "0.3.0-SNAPSHOT"
   :description "Asynchronous PostgreSQL Clojure client"
   :url "http://github.com/alaisi/postgres.async"
   :license {:name "Eclipse Public License"
