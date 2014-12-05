@@ -35,7 +35,7 @@ The connection pool is closed with `close-db!`. This closes all open connections
 
 Queries are executed with callback-based functions `query!` `insert!` `update!` `execute!` and [`core.async`](https://github.com/clojure/core.async) channel-based functions `<query!` `<insert!` `<update!` `<execute!`.
 
-Channel-based functions return a channel where query result is put in vector of `[result-set exception]`.
+Channel-based functions return a channel where query result or exception is put.
 
 ### execute! and query!
 
@@ -49,20 +49,20 @@ All other query functions delegate to `execute!`. This takes a db, a vector of s
 
 ;; async channel
 (<!! (<execute! db ["select name, price from products where id = $1" 1001]))
-; [{:updated 0, :rows [{:id 1001, :name "hammer", :price 10]]} nil]
+; {:updated 0, :rows [{:id 1001, :name "hammer", :price 10}]}
 
 (<!! (<execute! db ["select * from foobar"]))
-; [nil #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
+; #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
 ```
 
 `query!` passes only `:rows` to callback.
 
 ```clojure
 (<!! (<query! db ["select name, price from products"]))
-; [[{:id 1000, :name "screwdriver", :price 15} {:id 1001, :name "hammer", :price 10] nil]
+; [{:id 1000, :name "screwdriver", :price 15} {:id 1001, :name "hammer", :price 10}]
 
 (<!! (<query! db ["select name, price from products where id = $1" 1001]))
-; [[{:id 1001, :name "hammer", :price 10] nil]
+; [{:id 1001, :name "hammer", :price 10}]
 ```
 
 ### insert!
@@ -71,10 +71,10 @@ Insert is executed with an sql-spec that supports keys `:table` and `:returning`
 
 ```clojure
 (<!! (<insert! db {:table "products"} {:name "screwdriver" :price 15}))
-; [{:updated 1, :rows []} nil]
+; {:updated 1, :rows []}
 
 (<!! (<insert! db {:table "products" :returning "id"} {:name "hammer" :price 5}))
-; [{:updated 1, :rows [{:id 1001}]} nil]
+; {:updated 1, :rows [{:id 1001}]}
 ```
 
 Multiple rows can be inserted by passing a sequence to `insert!`.
@@ -83,7 +83,7 @@ Multiple rows can be inserted by passing a sequence to `insert!`.
 (<!! (<insert! db {:table "products" :returning "id"}
                   [{:name "hammer" :price 5}
                    {:name "nail"   :price 1}]))
-; [{:updated 2, :rows [{:id 1001} {:id 1002]} nil]
+; {:updated 2, :rows [{:id 1001} {:id 1002}]}
 ```
 
 ### update!
@@ -92,7 +92,7 @@ Update is executed with an sql-spec that supports keys `:table` `:returning` and
 
 ```clojure
 (<!! (<update! db {:table "users" :where ["id = $1" 1001}} {:price 6}))
-; [{:updated 1, :rows []} nil]
+; {:updated 1, :rows []}
 ```
 
 ## Transactions
@@ -113,7 +113,7 @@ Channel-returning functions can be composed with `dosql` macro that returns `[re
                rs (<query!  tx ["select * from promotions"])
                _  (<commit! tx)]
             {:now-promoting rs})))
-; [{:now-promoting [{:id 1, product_id 1002}]} nil]
+; {:now-promoting [{:id 1, product_id 1002}]}
 ```
 
 ## Custom column types
