@@ -1,6 +1,6 @@
 (ns postgres.async.impl
   (:require [clojure.string :as string]
-            [clojure.core.async :refer [chan put! go]])
+            [clojure.core.async :refer [chan close! put! go]])
   (:import [java.util.function Consumer]
            [com.github.pgasync ResultSet]
            [com.github.pgasync.impl PgRow]))
@@ -8,7 +8,9 @@
 (defmacro defasync [name args]
   `(defn ~name [~@args]
      (let [c# (chan 1)]
-       (~(symbol (subs (str name) 1)) ~@args #(put! c# (or %2 %1)))
+       (~(symbol (subs (str name) 1)) ~@args #(do
+                                                (put! c# (or %2 %1))
+                                                (close! c#)))
        c#)))
 
 (defmacro consumer-fn [[param] body]
