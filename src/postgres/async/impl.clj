@@ -18,10 +18,9 @@
                      (~@body))))
 
 (defn column->value [^Object value]
-  (if (or (nil? value)
-          (not (-> value .getClass .isArray)))
-    value
-    (vec (map column->value value))))
+  (if (and value (-> value .getClass .isArray))
+    (vec (map column->value value))
+    value))
 
 (defn result->map [^ResultSet result]
   (let [columns (.getColumns result)
