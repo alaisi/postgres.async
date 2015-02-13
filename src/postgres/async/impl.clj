@@ -17,16 +17,17 @@
   `(reify Consumer (accept [_# ~param]
                      (~@body))))
 
-(defn column->value [^PgRow row ^String col]
-  (let [r (.get row col)]
-    (if (-> r .getClass .isArray)
-      (vec r)
-      r)))
+(defn column->value [^Object value]
+  (if (or (nil? value)
+          (not (-> value .getClass .isArray)))
+    value
+    (vec (map column->value value))))
 
 (defn result->map [^ResultSet result]
   (let [columns (.getColumns result)
         row->map (fn [^PgRow row rowmap ^String col]
-            (assoc rowmap (keyword (.toLowerCase col)) (column->value row col)))]
+                   (assoc rowmap (keyword (.toLowerCase col))
+                          (column->value (.get row col))))]
     {:updated (.updatedRows result)
      :rows (vec (map (fn [row]
                            (reduce (partial row->map row) {} columns))

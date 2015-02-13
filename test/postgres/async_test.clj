@@ -41,7 +41,10 @@
 (deftest query-for-array
   (testing "arrays are converted to vectors"
     (let [rs (wait (<query! *db* ["select '{1,2}'::INT[] as a"]))]
-      (is (= [1 2] (get-in rs [0 :a]))))))
+      (is (= [1 2] (get-in rs [0 :a])))))
+  (testing "nested arrays are converted to vectors"
+    (let [rs (wait (<query! *db* ["select '{{1,2},{3,4},{5,NULL}}'::INT[][] as a"]))]
+      (is (= [[1 2] [3 4] [5 nil]] (get-in rs [0 :a]))))))
 
 (deftest inserts
   (testing "insert returns row count"
