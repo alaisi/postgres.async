@@ -38,6 +38,11 @@
     (let [rs (wait (<query! *db* ["select 1 as x"]))]
       (is (= 1 (get-in rs [0 :x]))))))
 
+(deftest query-for-array
+  (testing "arrays are converted to vectors"
+    (let [rs (wait (<query! *db* ["select '{1,2}'::INT[] as a"]))]
+      (is (= [1 2] (get-in rs [0 :a]))))))
+
 (deftest inserts
   (testing "insert returns row count"
     (let [rs (wait (<insert! *db* {:table table} {:t "x"}))]
