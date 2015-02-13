@@ -18,7 +18,10 @@
 
 (defn open-db
   "Creates a db connection pool"
-  [{:keys [hostname port username password database pool-size]}]
+  [{:keys [hostname port username password database pool-size] :as config}]
+  (doseq [param [:hostname :username :password :database]]
+    (when (nil? (param config))
+      (throw (IllegalArgumentException. (str param " is required")))))
   (-> (ConnectionPoolBuilder.)
       (.hostname hostname)
       (.port (or port 5432))

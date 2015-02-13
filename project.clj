@@ -9,4 +9,7 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [com.github.alaisi.pgasync/postgres-async-driver "0.4"]]
   :global-vars {*warn-on-reflection* true}
-  :target-path "target/%s")
+  :target-path "target/%s"
+  :profiles {:dev {:source-paths ["dev"]
+                   :dependencies [[org.clojure/tools.namespace "0.2.4"]
+                                  [org.clojure/java.classpath "0.2.0"]]}})
