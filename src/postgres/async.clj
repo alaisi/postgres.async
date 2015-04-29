@@ -1,6 +1,6 @@
 (ns postgres.async
-  (:require [postgres.async.impl :refer [consumer-fn defasync] :as pg]
-            [clojure.core.async :refer [<!]])
+  (:require [postgres.async.impl :refer [consumer-fn result-chan] :as pg]
+            [clojure.core.async :refer [<! chan put! close!]])
   (:import [com.github.pgasync Db ConnectionPoolBuilder
             QueryExecutor TransactionExecutor Transaction]
            [com.github.pgasync.impl.conversion DataConverter]))
@@ -38,76 +38,82 @@
   (.close db))
 
 (defn execute!
-  "Executes an sql statement and calls (f result-set exception) on completion"
-  [^QueryExecutor db [sql & params] f]
-  (.query db sql params
-          (consumer-fn [rs]
-                       (f (pg/result->map rs) nil))
-          (consumer-fn [exception]
-                       (f nil exception))))
+  "Executes an sql statement with parameters and returns result rows and update count."
+  ([db sql]
+     (result-chan execute! db sql))
+  ([^QueryExecutor db [sql & params] f]
+     (.query db sql params
+             (consumer-fn [rs]
+                          (f (pg/result->map rs) nil))
+             (consumer-fn [exception]
+                          (f nil exception)))))
 
 (defn query!
-  "Executes an sql query and calls (f rows exception) on completion"
-  [db sql f]
-  (execute! db sql (fn [rs err]
-                     (f (:rows rs) err))))
+  "Executes an sql query with parameters and returns result rows."
+  ([db sql]
+     (result-chan query! db sql))
+  ([db sql f]
+     (execute! db sql (fn [rs err]
+                        (f (:rows rs) err)))))
 
 (defn insert!
-  "Executes an sql insert and calls (f result-set exception) on completion.
+  "Executes an sql insert and returns update count and returned rows.
    Spec format is
      :table - table name
      :returning - sql string"
-  [db sql-spec data f]
-  (execute! db (list* (pg/create-insert-sql sql-spec data)
-                      (if (map? data)
-                        (vals data)
-                        (flatten (map vals data))))
-          f))
+  ([db sql-spec data]
+     (result-chan insert! db sql-spec data))
+  ([db sql-spec data f]
+     (execute! db (list* (pg/create-insert-sql sql-spec data)
+                         (if (map? data)
+                           (vals data)
+                           (flatten (map vals data))))
+               f)))
 
 (defn update!
-  "Executes an sql update and calls (f result-set exception) on completion.
+  "Executes an sql update and returns update count and returned rows.
    Spec format is
      :table - table name
      :returning - sql string
      :where - [sql & params]"
-  [db sql-spec data f]
-  (execute! db (flatten [(pg/create-update-sql sql-spec data)
-                        (rest (:where sql-spec))
-                        (vals data)])
-          f))
+  ([db sql-spec data]
+     (result-chan update! db sql-spec data))
+  ([db sql-spec data f]
+     (execute! db (concat [(pg/create-update-sql sql-spec data)]
+                          (rest (:where sql-spec))
+                          (vals data))
+               f)))
 
 (defn begin!
-  "Begins a transaction and calls (f transaction exception) on completion"
-  [^TransactionExecutor db f]
-  (.begin db
-          (consumer-fn [tx]
-                       (f tx nil))
-          (consumer-fn [exception]
-                       (f nil exception))))
+  "Begins a transaction."
+  ([db]
+     (result-chan begin! db))
+  ([^TransactionExecutor db f]
+     (.begin db
+             (consumer-fn [tx]
+                          (f tx nil))
+             (consumer-fn [exception]
+                          (f nil exception)))))
 
 (defn commit!
-  "Commits an active transaction and calls (f true exception) on completion"
-  [^Transaction tx f]
-  (.commit tx
-           #(f true nil)
-           (consumer-fn [exception]
-                        (f nil exception))))
+  "Commits an active transaction."
+  ([tx]
+     (result-chan commit! tx))
+  ([^Transaction tx f]
+     (.commit tx
+              #(f true nil)
+              (consumer-fn [exception]
+                           (f nil exception)))))
 
 (defn rollback!
-  "Rollbacks an active transaction and calls (f true exception) on completion"
-  [^Transaction tx f]
-  (.rollback tx
-             #(f true nil)
-             (consumer-fn [exception]
-                          (f nil exception))))
-
-(defasync <execute!  [db query])
-(defasync <query!    [db query])
-(defasync <insert!   [db sql-spec data])
-(defasync <update!   [db sql-spec data])
-(defasync <begin!    [db])
-(defasync <commit!   [tx])
-(defasync <rollback! [tx])
+  "Rollbacks an active transaction."
+  ([tx]
+     (result-chan rollback! tx))
+  ([^Transaction tx f]
+     (.rollback tx
+                #(f true nil)
+                (consumer-fn [exception]
+                             (f nil exception)))))
 
 (defmacro dosql
   "Takes values from channels returned by db functions and returns exception

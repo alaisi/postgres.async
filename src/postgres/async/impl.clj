@@ -5,17 +5,17 @@
            [com.github.pgasync ResultSet]
            [com.github.pgasync.impl PgRow]))
 
-(defmacro defasync [name args]
-  `(defn ~name [~@args]
-     (let [c# (chan 1)]
-       (~(symbol (subs (str name) 1)) ~@args #(do
-                                                (put! c# (or %2 %1))
-                                                (close! c#)))
-       c#)))
-
 (defmacro consumer-fn [[param] body]
   `(reify Consumer (accept [_# ~param]
                      (~@body))))
+
+(defn result-chan [f & args]
+  (let [channel  (chan 1)
+        callback (fn [rs err]
+                   (put! channel (or err rs))
+                   (close! channel))]
+    (apply f (concat args [callback]))
+    channel))
 
 (defn column->value [^Object value]
   (if (and value (-> value .getClass .isArray))
