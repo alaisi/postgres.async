@@ -33,35 +33,35 @@ The connection pool is closed with `close-db!`. This closes all open connections
 
 ## Running SQL queries
 
-Queries are executed with callback-based functions `query!` `insert!` `update!` `execute!` and [`core.async`](https://github.com/clojure/core.async) channel-based functions `<query!` `<insert!` `<update!` `<execute!`.
+Queries are executed with functions `query!` `insert!` `update!` `execute!`. All functions have two arities that use either callbacks or  a[`core.async`](https://github.com/clojure/core.async) channels.
 
-Channel-based functions return a channel where query result or exception is put.
+Channel-based functions return a channel where either query result or exception is put.
 
 ### execute! and query!
 
-All other query functions delegate to `execute!`. This takes a db, a vector of sql string and parameters plus a callback with arity of two.
+All other query functions delegate to `execute!`. This takes a db and a seq of sql followed by optional parameters.
 
 ```clojure
-;; callback
+;; async channel
+(<!! (execute! db ["select name, price from products where id = $1" 1001]))
+; {:updated 0, :rows [{:id 1001, :name "hammer", :price 10}]}
+
+(<!! (execute! db ["select * from foobar"]))
+; #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
+
+;; callback-based higher arity
 (execute! db ["select $1::text" "hello world"] (fn [rs err]
                                                    (println rs err))
 ; nil
-
-;; async channel
-(<!! (<execute! db ["select name, price from products where id = $1" 1001]))
-; {:updated 0, :rows [{:id 1001, :name "hammer", :price 10}]}
-
-(<!! (<execute! db ["select * from foobar"]))
-; #<SqlException com.github.pgasync.SqlException: ERROR: SQLSTATE=42P01, MESSAGE=relation "foobar" does not exist>
 ```
 
 `query!` passes only `:rows` to callback.
 
 ```clojure
-(<!! (<query! db ["select name, price from products"]))
+(<!! (query! db ["select name, price from products"]))
 ; [{:id 1000, :name "screwdriver", :price 15} {:id 1001, :name "hammer", :price 10}]
 
-(<!! (<query! db ["select name, price from products where id = $1" 1001]))
+(<!! (query! db ["select name, price from products where id = $1" 1001]))
 ; [{:id 1001, :name "hammer", :price 10}]
 ```
 
@@ -70,17 +70,17 @@ All other query functions delegate to `execute!`. This takes a db, a vector of s
 Insert is executed with an sql-spec that supports keys `:table` and `:returning`.
 
 ```clojure
-(<!! (<insert! db {:table "products"} {:name "screwdriver" :price 15}))
+(<!! (insert! db {:table "products"} {:name "screwdriver" :price 15}))
 ; {:updated 1, :rows []}
 
-(<!! (<insert! db {:table "products" :returning "id"} {:name "hammer" :price 5}))
+(<!! (insert! db {:table "products" :returning "id"} {:name "hammer" :price 5}))
 ; {:updated 1, :rows [{:id 1001}]}
 ```
 
 Multiple rows can be inserted by passing a sequence to `insert!`.
 
 ```clojure
-(<!! (<insert! db {:table "products" :returning "id"}
+(<!! (insert! db {:table "products" :returning "id"}
                   [{:name "hammer" :price 5}
                    {:name "nail"   :price 1}]))
 ; {:updated 2, :rows [{:id 1001} {:id 1002}]}
@@ -91,7 +91,7 @@ Multiple rows can be inserted by passing a sequence to `insert!`.
 Update is executed with an sql-spec that supports keys `:table` `:returning` and `:where`.
 
 ```clojure
-(<!! (<update! db {:table "users" :where ["id = $1" 1001}} {:price 6}))
+(<!! (update! db {:table "users" :where ["id = $1" 1001}} {:price 6}))
 ; {:updated 1, :rows []}
 ```
 
@@ -107,11 +107,11 @@ Channel-returning functions can be composed with `dosql` macro that returns `[re
 
 ```clojure
 (<!! (go
-       (dosql [tx (<begin! db)
-               rs (<insert! tx {:table products :returning "id"} {:name "saw"})
-               _  (<insert! tx {:table promotions} {:product_id (get-in rs [:rows 0 :id])})
-               rs (<query!  tx ["select * from promotions"])
-               _  (<commit! tx)]
+       (dosql [tx (begin! db)
+               rs (insert! tx {:table products :returning "id"} {:name "saw"})
+               _  (insert! tx {:table promotions} {:product_id (get-in rs [:rows 0 :id])})
+               rs (query!  tx ["select * from promotions"])
+               _  (commit! tx)]
             {:now-promoting rs})))
 ; {:now-promoting [{:id 1, product_id 1002}]}
 ```
