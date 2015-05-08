@@ -103,7 +103,7 @@ See composition below for example.
 
 ## Composition
 
-Channel-returning functions can be composed with `dosql` macro that returns `[result-of-body first-exception]`.
+Channel-returning functions can be composed with `dosql` macro that returns result of last form of first exception.
 
 ```clojure
 (<!! (go
