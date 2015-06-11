@@ -7,7 +7,8 @@
         :url "http://github.com/alaisi/postgres.async.git"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [com.github.alaisi.pgasync/postgres-async-driver "0.5"]]
+                 [com.github.alaisi.pgasync/postgres-async-driver "0.6"]
+                 [cheshire "5.5.0" :scope "provided"]]
   :lein-release {:deploy-via :clojars}
   :global-vars {*warn-on-reflection* true}
   :target-path "target/%s"

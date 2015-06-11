@@ -3,10 +3,10 @@
             [clojure.core.async :refer [<!! go]]
             [postgres.async :refer :all]))
 
-(def ^:private ^:dynamic *db*)
+(def ^:dynamic *db*)
 (def table "clj_pg_test")
 
-(defn- wait [channel]
+(defn wait [channel]
   (let [r (<!! channel)]
     (if (instance? Throwable r)
       (throw r))
@@ -17,7 +17,7 @@
   (wait (execute! db [(str "create table " table " (
                            id serial, t varchar(10))")])))
 
-(defn- db-fixture [f]
+(defn db-fixture [f]
   (letfn [(env [name default]
             (or (System/getenv name) default))]
     (binding [*db* (open-db {:hostname (env "PG_HOST" "localhost")
@@ -34,25 +34,31 @@
 (use-fixtures :each db-fixture)
 
 (deftest queries
+
   (testing "query returns rows as map"
     (let [rs (wait (query! *db* ["select 1 as x"]))]
       (is (= 1 (get-in rs [0 :x]))))))
 
 (deftest query-for-array
+
   (testing "arrays are converted to vectors"
     (let [rs (wait (query! *db* ["select '{1,2}'::INT[] as a"]))]
       (is (= [1 2] (get-in rs [0 :a])))))
+
   (testing "nested arrays are converted to vectors"
     (let [rs (wait (query! *db* ["select '{{1,2},{3,4},{5,NULL}}'::INT[][] as a"]))]
       (is (= [[1 2] [3 4] [5 nil]] (get-in rs [0 :a]))))))
 
 (deftest inserts
+
   (testing "insert returns row count"
     (let [rs (wait (insert! *db* {:table table} {:t "x"}))]
       (is (= 1 (:updated rs)))))
+
   (testing "insert with returning returns generated keys"
     (let [rs (wait (insert! *db* {:table table :returning "id"} {:t "y"}))]
       (is (get-in rs [:rows 0 :id]))))
+
   (testing "multiple rows can be inserted"
     (let [rs (wait (insert! *db*
                              {:table table :returning "id"}
@@ -61,6 +67,7 @@
       (is (= 2 (count (:rows rs)))))))
 
 (deftest updates
+
   (testing "update returns row count"
     (let [rs (wait (insert! *db*
                              {:table table :returning "id"}
@@ -73,6 +80,7 @@
       (is (= 2 (:updated rs))))))
 
 (deftest sql-macro
+
   (testing "dosql returns last form"
     (is (= "123" (wait (go (dosql
                             [tx (begin! *db*)
@@ -80,6 +88,7 @@
                              rs (query! tx ["select $1::text as t" (:x (first rs))])
                              _  (commit! tx)]
                             (:t (first rs))))))))
+
   (testing "dosql short-circuits on errors"
     (let [e (Exception. "Oops!")
           executed (atom 0)]

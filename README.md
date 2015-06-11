@@ -116,20 +116,29 @@ Channel-returning functions can be composed with `dosql` macro that returns resu
 ; {:now-promoting [{:id 1, product_id 1002}]}
 ```
 
+## JSON and JSONB
+
+Using JSON types requires `[cheshire "5.5.0"]` and reading the ns `postgres.async.json`. 
+
+```clojure
+(require '[postgres.async.json])
+
+(<!! (query! db ["select $1::JSONB" {:hello "world"}]))
+; [{:jsonb {:hello "world"}}]
+```
+
 ## Custom column types
 
 Support for custom types can be added by extending `IPgParameter` protocol and `from-pg-value` multimethod.
 
 ```clojure
-(require '[cheshire.core :as json])
-
 (extend-protocol IPgParameter 
-  clojure.lang.IPersistentMap
-  (to-pg-value [value]
-    (.getBytes (json/generate-string value))))
+  com.example.MyHStore
+  (to-pg-value [store]
+    (.getBytes (str store) "UTF-8")))
 
-(defmethod from-pg-value com.github.pgasync.impl.Oid/JSON [oid value]
-  (json/parse-string (String. value))
+(defmethod from-pg-value com.github.pgasync.impl.Oid/HSTORE [oid ^bytes value]
+  (my-h-store/parse-string (String. value "UTF-8)))
 ```
 
 ## Dependencies
