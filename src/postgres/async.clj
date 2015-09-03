@@ -18,7 +18,8 @@
 
 (defn open-db
   "Creates a db connection pool"
-  [{:keys [hostname port username password database pool-size ssl validation-query]
+  [{:keys [hostname port username password database
+           pool-size ssl validation-query pipeline]
     :as config}]
   (doseq [param [:hostname :username :password :database]]
     (when (nil? (param config))
@@ -30,6 +31,7 @@
       (.username username)
       (.password password)
       (.ssl (boolean ssl))
+      (.pipeline (boolean pipeline))
       (.poolSize (or pool-size 25))
       (.validationQuery validation-query)
       (.dataConverter (create-converter))

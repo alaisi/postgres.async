@@ -25,6 +25,7 @@
                              :database (env "PG_DB" "postgres")
                              :username (env "PG_USER" "postgres")
                              :password (env "PG_PASSWORD" "postgres")
+                             :pipeline true
                              :pool-size 1})]
       (try
         (create-tables *db*)
