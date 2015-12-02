@@ -6,8 +6,8 @@
   :scm {:name "git"
         :url "http://github.com/alaisi/postgres.async.git"}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [com.github.alaisi.pgasync/postgres-async-driver "0.7-SNAPSHOT"]
+                 [org.clojure/core.async "0.2.374"]
+                 [com.github.alaisi.pgasync/postgres-async-driver "0.7"]
                  [cheshire "5.5.0" :scope "provided"]]
   :lein-release {:deploy-via :clojars}
   :global-vars {*warn-on-reflection* true}

@@ -33,7 +33,7 @@
       (.ssl (boolean ssl))
       (.pipeline (boolean pipeline))
       (.poolSize (or pool-size 25))
-      (.validationQuery validation-query)
+      (.validationQuery (or validation-query ""))
       (.dataConverter (create-converter))
       (.build)))
 

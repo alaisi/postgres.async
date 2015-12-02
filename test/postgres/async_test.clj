@@ -25,6 +25,7 @@
                              :database (env "PG_DB" "postgres")
                              :username (env "PG_USER" "postgres")
                              :password (env "PG_PASSWORD" "postgres")
+                             :validation-query "select 1"
                              :pipeline true
                              :pool-size 1})]
       (try
