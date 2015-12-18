@@ -17,20 +17,40 @@
     (apply f (concat args [callback]))
     channel))
 
-(defn column->value [^Object value]
+(defn- column->value [^Object value]
   (if (and value (-> value .getClass .isArray))
     (vec (map column->value value))
     value))
 
+;; TODO: make columns public in the Java driver
+(defn- get-columns [^PgRow row]
+  (-> (doto (.getDeclaredField PgRow "columns")
+        (.setAccessible true))
+      (.get row)
+      (keys)))
+
+(defn- row->map [^PgRow row ^Object rowmap ^String col]
+  (assoc rowmap
+         (keyword (.toLowerCase col))
+         (column->value (.get row col))))
+
 (defn result->map [^ResultSet result]
-  (let [columns (.getColumns result)
-        row->map (fn [^PgRow row rowmap ^String col]
-                   (assoc rowmap (keyword (.toLowerCase col))
-                          (column->value (.get row col))))]
+  (let [columns (.getColumns result)]
     {:updated (.updatedRows result)
      :rows (vec (map (fn [row]
-                           (reduce (partial row->map row) {} columns))
-                         result))}))
+                       (reduce (partial row->map row) {} columns))
+                     result))}))
+
+(defn ^rx.Observer row-observer [channel]
+  (reify rx.Observer
+    (onNext [_ row]
+      (put! channel (reduce (partial row->map row)
+                            {} (get-columns row))))
+    (onError [_ err]
+      (put! channel err)
+      (close! channel))
+    (onCompleted [_]
+      (close! channel))))
 
 (defn- list-columns [data]
   (if (map? data)
@@ -68,3 +88,5 @@
        " WHERE " (first where)
        (when returning
          (str " RETURNING " returning))))
+
+

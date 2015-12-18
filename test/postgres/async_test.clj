@@ -1,7 +1,8 @@
 (ns postgres.async-test
   (:require [clojure.test :refer :all]
             [clojure.core.async :refer [<!! go]]
-            [postgres.async :refer :all]))
+            [postgres.async :refer :all])
+  (:import [com.github.pgasync SqlException]))
 
 (def ^:dynamic *db*)
 (def table "clj_pg_test")
@@ -50,6 +51,20 @@
   (testing "nested arrays are converted to vectors"
     (let [rs (wait (query! *db* ["select '{{1,2},{3,4},{5,NULL}}'::INT[][] as a"]))]
       (is (= [[1 2] [3 4] [5 nil]] (get-in rs [0 :a]))))))
+
+(deftest query-for-rows
+
+  (testing "each row is emitted to channel"
+    (let [c (query-rows! *db* ["select generate_series(1, $1::int4) as s", 3])]
+      (is (= {:s 1} (<!! c)))
+      (is (= {:s 2} (<!! c)))
+      (is (= {:s 3} (<!! c)))
+      (is (nil? (<!! c)))))
+
+  (testing "a single error is emitted on query failure")
+    (let [c (query-rows! *db* ["selectx"])]
+      (is (instance? SqlException (<!! c)))
+      (is (nil? (<!! c)))))
 
 (deftest inserts
 

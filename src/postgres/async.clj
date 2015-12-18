@@ -61,6 +61,14 @@
      (execute! db sql (fn [rs err]
                         (f (:rows rs) err)))))
 
+(defn query-rows!
+  "Executes an sql query with parameters and returns a channel where 0-n rows are emitted."
+  [^QueryExecutor db [sql & params]]
+  (let [c (chan)]
+    (-> (.queryRows db sql (into-array params))
+        (.subscribe (pg/row-observer c)))
+    c))
+
 (defn insert!
   "Executes an sql insert and returns update count and returned rows.
    Spec format is
