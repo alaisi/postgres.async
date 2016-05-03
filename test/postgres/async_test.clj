@@ -66,6 +66,21 @@
       (is (instance? SqlException (<!! c)))
       (is (nil? (<!! c)))))
 
+(deftest query-for-overridden-types
+
+  (defmethod from-pg-value com.github.pgasync.impl.Oid/TIMESTAMP [oid ^bytes value]
+    (String. value "utf-8"))
+
+  (testing "timestamp can be returned as string"
+    (let [c (query-rows! *db* ["select $1::TIMESTAMP as ts"
+                               "2016-05-01T12:00:00.001"])]
+      (is (= {:ts "2016-05-01 12:00:00.001"} (<!! c)))))
+
+  (testing "unsupported type throws an exception"
+    (let [c (query-rows! *db* ["select '<x/>'::xml"])
+          ^Throwable ex (<!! c)]
+      (is (= "Unknown conversion source: XML" (.getMessage ex))))))
+
 (deftest inserts
 
   (testing "insert returns row count"

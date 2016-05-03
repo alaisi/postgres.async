@@ -6,13 +6,20 @@
            [com.github.pgasync.impl.conversion DataConverter]))
 
 (defmulti from-pg-value (fn [oid value] oid))
+(defmethod from-pg-value :default [oid value] ::raw-value)
+
 (defprotocol IPgParameter
   (to-pg-value [value]))
 
 (defn- create-converter []
   (proxy [DataConverter] []
-    (toConvertable [oid value]
-      (from-pg-value oid value))
+    (toObject [oid value]
+      (when value
+        (let [val (from-pg-value oid value)]
+          (if (= ::raw-value val)
+            (proxy-call-with-super #(.toObject ^DataConverter this oid value)
+                                   this "toObject")
+            val))))
     (fromConvertable [value]
       (to-pg-value value))))
 
