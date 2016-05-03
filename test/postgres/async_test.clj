@@ -40,7 +40,11 @@
 
   (testing "query returns rows as map"
     (let [rs (wait (query! *db* ["select 1 as x"]))]
-      (is (= 1 (get-in rs [0 :x]))))))
+      (is (= 1 (get-in rs [0 :x])))))
+
+  (testing "query returns oid bool as boolean"
+    (let [rs (wait (query! *db* ["select true as b"]))]
+      (is (= true (get-in rs [0 :b]))))))
 
 (deftest query-for-array
 
@@ -50,7 +54,11 @@
 
   (testing "nested arrays are converted to vectors"
     (let [rs (wait (query! *db* ["select '{{1,2},{3,4},{5,NULL}}'::INT[][] as a"]))]
-      (is (= [[1 2] [3 4] [5 nil]] (get-in rs [0 :a]))))))
+      (is (= [[1 2] [3 4] [5 nil]] (get-in rs [0 :a])))))
+
+  (testing "bool arrays are converted to boolean vectors"
+    (let [rs (wait (query! *db* ["select '{true,false}'::BOOL[] as b"]))]
+      (is (= [true false] (get-in rs [0 :b]))))))
 
 (deftest query-for-rows
 
