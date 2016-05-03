@@ -138,7 +138,14 @@ Support for custom types can be added by extending `IPgParameter` protocol and `
     (.getBytes (str store) "UTF-8")))
 
 (defmethod from-pg-value com.github.pgasync.impl.Oid/HSTORE [oid ^bytes value]
-  (my-h-store/parse-string (String. value "UTF-8)))
+  (my-h-store/parse-string (String. value "UTF-8")))
+```
+
+`from-pg-value` can also be used for overriding "core" types. This is especially useful with temporal data types that are by default converted to `java.sql.Date`, `java.sql.Time`, `java.sql.Timestamp`.
+
+```clojure
+(defmethod from-pg-value com.github.pgasync.impl.Oid/DATE [oid ^bytes value]
+  (java.time.LocalDate/parse (String. value "UTF-8")))
 ```
 
 ## Dependencies
