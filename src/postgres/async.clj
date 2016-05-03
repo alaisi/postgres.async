@@ -13,15 +13,15 @@
 
 (defn- create-converter []
   (proxy [DataConverter] []
+    (fromConvertable [value]
+      (to-pg-value value))
     (toObject [oid value]
       (when value
-        (let [val (from-pg-value oid value)]
-          (if (= ::raw-value val)
-            (proxy-call-with-super #(.toObject ^DataConverter this oid value)
-                                   this "toObject")
-            val))))
-    (fromConvertable [value]
-      (to-pg-value value))))
+        (let [val (from-pg-value oid value)
+              this ^DataConverter this]
+          (if-not (= ::raw-value val)
+            val
+            (proxy-super toObject oid value)))))))
 
 (defn open-db
   "Creates a db connection pool"
