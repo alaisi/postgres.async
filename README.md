@@ -1,6 +1,8 @@
 postgres.async
 ==============
 
+[![Clojars Project](https://img.shields.io/clojars/v/alaisi/postgres.async.svg)](https://clojars.org/alaisi/postgres.async)
+
 Asynchronous PostgreSQL client for Clojure.
 
 ## Download
