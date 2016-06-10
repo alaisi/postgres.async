@@ -11,7 +11,6 @@ Add the following to your [Leiningen](http://github.com/technomancy/leiningen) `
 
 ![latest postgres.async version](https://clojars.org/alaisi/postgres.async/latest-version.svg)
 
-
 ## Setting up a connection pool
 
 A pool of connections to PostgreSQL backend is created with `open-db`. Each connection *pool* starts a single I/O thread used in communicating with PostgreSQL backend.
