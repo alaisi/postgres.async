@@ -22,12 +22,8 @@
     (vec (map column->value value))
     value))
 
-;; TODO: make columns public in the Java driver
 (defn- get-columns [^PgRow row]
-  (-> (doto (.getDeclaredField PgRow "columns")
-        (.setAccessible true))
-      (.get row)
-      (keys)))
+  (keys (.getColumns row)))
 
 (defn- row->map [^PgRow row ^Object rowmap ^String col]
   (assoc rowmap
