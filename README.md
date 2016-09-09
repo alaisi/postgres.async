@@ -9,7 +9,7 @@ Asynchronous PostgreSQL client for Clojure.
 
 Add the following to your [Leiningen](http://github.com/technomancy/leiningen) `project.clj`:
 
-![latest postgres.async version](https://clojars.org/alaisi/postgres.async/latest-version.svg)
+[![latest postgres.async version](https://clojars.org/alaisi/postgres.async/latest-version.svg)](https://clojars.org/alaisi/postgres.async)
 
 ## Setting up a connection pool
 
